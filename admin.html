@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin - Qudratik Herbal</title>
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
+<meta name="theme-color" content="#14532d">
+<link rel="stylesheet" href="style.css?v=20261103c">
+<link rel="stylesheet" href="admin.css?v=20261103c">
+</head>
+<body class="admin-body">
+
+<div id="login-view" class="login-wrap">
+  <form class="login-card" id="login-form">
+    <div class="logo" style="justify-content:center">
+      <span class="logo-mark" aria-hidden="true"><svg viewBox="0 0 64 48" width="52" height="40"><path d="M6 22c6 14 16 22 26 22S52 36 58 22c-8 3-16 4-26 4S14 25 6 22z" fill="#2e7d32"/><path d="M32 26c0-8 2-14 8-19 1 8-2 15-8 19zm0 0c0-6-2-10-6-13 0 6 2 10 6 13z" fill="#388e3c"/></svg></span>
+      <span class="logo-text"><span class="logo-name" style="font-size:26px">Qudratik <em>Herbal</em></span><span class="logo-tag">Admin Panel</span></span>
+    </div>
+    <label class="fl" for="li-user" style="margin-top:20px">Username</label>
+    <input class="fi" id="li-user" autocomplete="username" required>
+    <label class="fl" for="li-pass" style="margin-top:12px">Password</label>
+    <input class="fi" id="li-pass" type="password" autocomplete="current-password" required>
+    <p class="login-err" id="login-err" hidden>Incorrect username or password.</p>
+    <button class="btn block" type="submit" style="margin-top:18px">Login</button>
+    <p class="demo-note">Demo login for testing: <b>admin</b> / <b>qudratik2026</b><br>Change these credentials before production launch.</p>
+    <p style="text-align:center;margin-top:12px"><a href="index.html">View Storefront</a></p>
+  </form>
+</div>
+
+<div id="admin-view" hidden>
+  <div class="admin-top">
+    <div class="wrap admin-top-in">
+      <b>Qudratik Herbal Admin</b>
+      <span class="admin-top-links">
+        <a href="index.html">View Store</a>
+        <button class="btn small ghost" id="logout-btn">Logout</button>
+      </span>
+    </div>
+  </div>
+  <div class="wrap admin-layout">
+    <aside class="admin-side">
+      <button class="side-link on" data-tab="dashboard">Dashboard</button>
+      <button class="side-link" data-tab="products">Products</button>
+      <button class="side-link" data-tab="categories">Categories</button>
+      <button class="side-link" data-tab="orders">Orders</button>
+      <button class="side-link" data-tab="settings">Settings</button>
+    </aside>
+    <section class="admin-main" id="admin-main"></section>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+<script src="data.js?v=20261103c"></script>
+<script src="admin.js?v=20261103c"></script>
+</body>
+</html>
