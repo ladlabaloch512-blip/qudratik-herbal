@@ -124,17 +124,23 @@
   function inWish(id) { return QH.getWishlist().indexOf(id) >= 0; }
   function shipFor(subtotal) { return subtotal >= settings.freeShipThreshold || subtotal === 0 ? 0 : settings.shippingFee; }
 
-  /* ---------- REVEAL ANIMATIONS - ROUND 4 (Noor Wave Cascade) ----------
-     Har .rv element render hote hi hidden hota hai (opacity 0 + translateY(26px) + scale .98),
-     phir viewport me hote hi sibling stagger ~110ms (cap 660ms) ke sath soft-bounce
-     cubic-bezier(.34,1.56,.64,1) KEYFRAME animation se reveal hota hai. Jo neeche hain,
-     scroll par reveal (IO threshold kam 0.08, rootMargin neeche +18% taake waqt par khulen).
-     SAFETY: har element par ~1.8s timed failsafe + 2s global sweep, lekin failsafe bhi
-     doReveal() se animation ke sath hi visible karta hai, seedha snap nahi.
-     IntersectionObserver na ho to kuch hide nahi hota.
-     ROUND 4: prefers-reduced-motion par bhi animations chalte hain. Round 3 me RM gate
-     Ibrar ke phone par tamam animations band kar deta tha (Noor par fix shuda masla).
-     .rv-now elements (PDP main block, page headings) view khulte hi foran reveal hote hain. */
+  /* ---------- REVEAL ANIMATIONS - ROUND 5 (Noor Wave Cascade, scroll-triggered) ----------
+     Ibrar ki demand (round 5): cards PEHLE hidden hon, aur JAISE JAISE SCROLL DOWN ho
+     waise waise har card reveal ho. Round 3/4 ka 1.8s failsafe + 2s sweep below-fold
+     cards ko bhi 2s me khol deta tha, is liye scroll tak kuch hidden nahi rehta tha.
+     Ab: viewport ke andar wale load par stagger se reveal, below-fold HIDDEN rehte
+     hain jab tak viewport ke qareeb na ayen (IO threshold 0.1, rootMargin +10%
+     pre-trigger). Reveal wahi rvIn bounce (cubic-bezier(.34,1.56,.64,1), .68s) +
+     row ke andar ~110ms stagger.
+     SAFETY (scroll behavior ko mare baghair): dual trigger - IO ke sath scroll/resize
+     listener bhi har unrevealed element ki position check karta hai; jiska top
+     viewport bottom se upar agaya ho (user use cross kar chuka ho, fast scroll ya
+     anchor jump ki surat me bhi) wo reveal ho jata hai, koi card peeche hidden
+     nahi rehta. IO available hi na ho to sab foran visible (kuch hide nahi hota).
+     Koi timed force-reveal NAHI hai.
+     ROUND 4 barqarar: prefers-reduced-motion par koi gate nahi, animations chalti hain.
+     .rv-now elements (PDP main block, cart/checkout/success, page headings) view
+     khulte hi foran reveal hote hain, scroll reveal par NAHI. */
   var rvIO = null;
   function doReveal(el) {
     if (el.classList.contains("rv-shown")) return;
@@ -150,8 +156,32 @@
     if (rvIO || !("IntersectionObserver" in window)) return rvIO;
     rvIO = new IntersectionObserver(function (entries) {
       entries.forEach(function (en) { if (en.isIntersecting) doReveal(en.target); });
-    }, { rootMargin: "0px 0px 18% 0px", threshold: 0.08 });
+    }, { rootMargin: "0px 0px 10% 0px", threshold: 0.1 });
     return rvIO;
+  }
+  /* Dual trigger (safety): scroll/resize par unrevealed elements ki position check.
+     Jiska top viewport bottom se upar agaya ho use reveal kar do, taake fast scroll,
+     anchor jump ya IO miss ki surat me koi card peeche hidden na reh jaye. Neeche
+     wale elements ko ye kabhi nahi kholta, is liye scroll reveal barqarar rehta hai. */
+  var rvScrollBound = false, rvTicking = false;
+  function rvScrollCheck() {
+    rvTicking = false;
+    var vh = window.innerHeight || document.documentElement.clientHeight;
+    document.querySelectorAll(".rv-hidden").forEach(function (el) {
+      var r = el.getBoundingClientRect();
+      if (r.top < vh) doReveal(el);
+    });
+  }
+  function bindRvScroll() {
+    if (rvScrollBound) return;
+    rvScrollBound = true;
+    function onScroll() {
+      if (rvTicking) return;
+      rvTicking = true;
+      requestAnimationFrame(rvScrollCheck);
+    }
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
   }
   function initReveal(scope) {
     var els = Array.prototype.slice.call((scope || document).querySelectorAll(".rv:not(.rv-armed)"));
@@ -170,18 +200,18 @@
       var sibIx = perParent[key] - 1;
       el.setAttribute("data-rv-delay", String(Math.min(sibIx * 110, 660)));
       el.classList.add("rv-hidden");
-      /* timed failsafe: 1.8s me har haal me visible */
-      setTimeout(function () { doReveal(el); }, 1800);
+      /* Round 5: koi timed failsafe NAHI. Below-fold hidden rahe ga jab tak
+         IO ya scroll-check use viewport ke qareeb na le aye. */
       if (el.classList.contains("rv-now")) {
         requestAnimationFrame(function () { requestAnimationFrame(function () { doReveal(el); }); });
       } else {
         rvIO.observe(el);
       }
     });
-    /* global sweep failsafe: 2s baad document me koi rv-hidden na rahe */
-    setTimeout(function () {
-      document.querySelectorAll(".rv-hidden").forEach(function (el) { doReveal(el); });
-    }, 2000);
+    bindRvScroll();
+    /* jo elements pehle se viewport me hain wo IO ke sath sath scroll-check se bhi
+       foran (stagger ke sath) reveal hon */
+    requestAnimationFrame(function () { requestAnimationFrame(rvScrollCheck); });
   }
 
   function cardHTML(p) {
@@ -657,7 +687,12 @@
     var parts = hash.split("?");
     var path = parts[0]; var params = new URLSearchParams(parts[1] || "");
     document.querySelectorAll(".nav-link").forEach(function (a) { a.classList.remove("active"); });
-    window.scrollTo(0, 0);
+    /* Round 5 fix: view change par scroll FORAN top par (instant). CSS ka
+       scroll-behavior:smooth pehle is scroll ko animated bana deta tha, view
+       purani scroll position par render hota tha aur reveal system tamam cards
+       ko "crossed" samajh kar ek sath khol deta tha. */
+    try { window.scrollTo({ top: 0, left: 0, behavior: "instant" }); }
+    catch (e) { window.scrollTo(0, 0); }
     if (path === "" ) { document.querySelector('.nav-link[href="#/"]').classList.add("active"); viewHome(); }
     else if (path === "shop") viewShop(params);
     else if (path.indexOf("product/") === 0) viewProduct(decodeURIComponent(path.slice(8)));
