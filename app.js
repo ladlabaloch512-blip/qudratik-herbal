@@ -36,6 +36,10 @@
     document.getElementById("wa-float").href = "https://wa.me/" + settings.whatsapp;
     var fp = document.getElementById("footer-phone");
     fp.textContent = settings.phone; fp.href = "https://wa.me/" + settings.whatsapp;
+    var dp = document.getElementById("drawer-phone-text");
+    if (dp) dp.textContent = settings.phone;
+    var dw = document.getElementById("drawer-wa");
+    if (dw) dw.href = "https://wa.me/" + settings.whatsapp;
   }
   var lastAddedId = null;
   function addToCart(id, qty, sourceImg) {
@@ -47,7 +51,7 @@
     toast("Added to cart");
   }
   /* Fly-to-cart (Noor style): product image ~700ms quadratic-bezier arc me header cart tak,
-     phir badge pop. Reduced motion par seedha badge pop. */
+     phir badge pop. ROUND 4: reduced-motion par bhi fly chalta hai (Ibrar ki demand). */
   function popBadge() {
     var b = document.getElementById("cart-count");
     if (!b) return;
@@ -57,7 +61,6 @@
   function flyToCart(img) {
     var target = document.querySelector('.hact[href="#/cart"]');
     if (!target || !img || !img.getBoundingClientRect) { popBadge(); return; }
-    if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) { popBadge(); return; }
     try {
       var r1 = img.getBoundingClientRect(), r2 = target.getBoundingClientRect();
       if (!r1.width || !r2.width) { popBadge(); return; }
@@ -85,7 +88,6 @@
   /* Chhota particle burst (wishlist heart + success leaves ke liye shared helper) */
   function spawnBurst(host, count, colors, sizePx, distMin, distMax, dur) {
     if (!host) return;
-    if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     try {
       for (var i = 0; i < count; i++) {
         var s = document.createElement("span");
@@ -122,14 +124,17 @@
   function inWish(id) { return QH.getWishlist().indexOf(id) >= 0; }
   function shipFor(subtotal) { return subtotal >= settings.freeShipThreshold || subtotal === 0 ? 0 : settings.shippingFee; }
 
-  /* ---------- REVEAL ANIMATIONS - ROUND 3 (Noor Wave Cascade) ----------
+  /* ---------- REVEAL ANIMATIONS - ROUND 4 (Noor Wave Cascade) ----------
      Har .rv element render hote hi hidden hota hai (opacity 0 + translateY(26px) + scale .98),
      phir viewport me hote hi sibling stagger ~110ms (cap 660ms) ke sath soft-bounce
-     cubic-bezier(.34,1.56,.64,1) se reveal hota hai. Jo neeche hain, scroll par reveal.
-     SAFETY: har element par ~1.8s timed failsafe + 2s global sweep; IntersectionObserver
-     na ho to kuch hide nahi hota; prefers-reduced-motion par sab seedha visible.
+     cubic-bezier(.34,1.56,.64,1) KEYFRAME animation se reveal hota hai. Jo neeche hain,
+     scroll par reveal (IO threshold kam 0.08, rootMargin neeche +18% taake waqt par khulen).
+     SAFETY: har element par ~1.8s timed failsafe + 2s global sweep, lekin failsafe bhi
+     doReveal() se animation ke sath hi visible karta hai, seedha snap nahi.
+     IntersectionObserver na ho to kuch hide nahi hota.
+     ROUND 4: prefers-reduced-motion par bhi animations chalte hain. Round 3 me RM gate
+     Ibrar ke phone par tamam animations band kar deta tha (Noor par fix shuda masla).
      .rv-now elements (PDP main block, page headings) view khulte hi foran reveal hote hain. */
-  var reduceMotion = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   var rvIO = null;
   function doReveal(el) {
     if (el.classList.contains("rv-shown")) return;
@@ -145,13 +150,13 @@
     if (rvIO || !("IntersectionObserver" in window)) return rvIO;
     rvIO = new IntersectionObserver(function (entries) {
       entries.forEach(function (en) { if (en.isIntersecting) doReveal(en.target); });
-    }, { rootMargin: "0px 0px -4% 0px", threshold: 0.04 });
+    }, { rootMargin: "0px 0px 18% 0px", threshold: 0.08 });
     return rvIO;
   }
   function initReveal(scope) {
     var els = Array.prototype.slice.call((scope || document).querySelectorAll(".rv:not(.rv-armed)"));
     if (!els.length) return;
-    if (reduceMotion || !("IntersectionObserver" in window)) {
+    if (!("IntersectionObserver" in window)) {
       els.forEach(function (el) { el.classList.add("rv-armed", "rv-shown"); });
       return;
     }
@@ -689,6 +694,47 @@
   document.getElementById("footer-cats").innerHTML = QH.CATEGORIES.map(function (c) {
     return '<li><a href="#/shop?cat=' + encodeURIComponent(c) + '">' + c + '</a></li>';
   }).join("");
+
+  /* ---------- MOBILE DRAWER (ROUND 4) ----------
+     Left se animated sidebar: slide-in ~380ms smooth easing + overlay fade-in.
+     Links staggered fade/slide-in (har link par --i delay index).
+     Close: X button, overlay click, kisi bhi link par click, Escape. Body scroll lock. */
+  var drawer = document.getElementById("drawer");
+  var drawerOverlay = document.getElementById("drawer-overlay");
+  var drawerBtn = document.getElementById("drawer-btn");
+  document.getElementById("drawer-cats").innerHTML = QH.CATEGORIES.map(function (c) {
+    return '<a class="dlink dcat" href="#/shop?cat=' + encodeURIComponent(c) + '">' + c + ' <span>' + QH.getProducts().filter(function (p) { return p.category === c; }).length + ' items</span></a>';
+  }).join("");
+  (function assignDrawerIx() {
+    var items = drawer.querySelectorAll(".drawer-nav .dlink, .drawer-nav .dlabel, .drawer-contact");
+    items.forEach(function (el, i) { el.style.setProperty("--i", i); });
+  })();
+  var drawerOpen = false, drawerHideTimer = null;
+  function openDrawer() {
+    if (drawerOpen) return; drawerOpen = true;
+    clearTimeout(drawerHideTimer);
+    drawerOverlay.hidden = false;
+    /* overlay fade ke liye ek frame baad .show */
+    requestAnimationFrame(function () { requestAnimationFrame(function () { drawerOverlay.classList.add("show"); }); });
+    drawer.classList.add("open");
+    drawer.setAttribute("aria-hidden", "false");
+    drawerBtn.setAttribute("aria-expanded", "true");
+    document.body.classList.add("locked");
+  }
+  function closeDrawer() {
+    if (!drawerOpen) return; drawerOpen = false;
+    drawerOverlay.classList.remove("show");
+    drawer.classList.remove("open");
+    drawer.setAttribute("aria-hidden", "true");
+    drawerBtn.setAttribute("aria-expanded", "false");
+    document.body.classList.remove("locked");
+    drawerHideTimer = setTimeout(function () { drawerOverlay.hidden = true; }, 340);
+  }
+  drawerBtn.addEventListener("click", openDrawer);
+  document.getElementById("drawer-close").addEventListener("click", closeDrawer);
+  drawerOverlay.addEventListener("click", closeDrawer);
+  drawer.addEventListener("click", function (e) { if (e.target.closest("a")) closeDrawer(); });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeDrawer(); });
 
   document.getElementById("search-form").addEventListener("submit", function (e) {
     e.preventDefault();
