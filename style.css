@@ -428,3 +428,28 @@ body.locked{overflow:hidden}
   #announce-text{letter-spacing:0}
   .tb-right{margin-left:0}
 }
+
+/* ============ ROUND 6: MOBILE HEADER OVERLAP FIX (max-width 768px) ============
+   Logo wordmark wishlist/cart icons ke sath mix ho raha tha, khaas taur par
+   product page par. Ab header row compact hai: chhota wordmark, chhota leaf
+   mark, compact burger, icon-only actions (labels hide), taake 360px par bhi
+   logo text ka right edge wishlist button se pehle khatam ho. */
+@media (max-width:768px){
+  .header .header-in{gap:10px 8px;padding-left:12px;padding-right:12px}
+  .header .burger{width:40px;height:40px}
+  .header .burger svg{width:22px;height:22px}
+  .header .logo{flex:1 1 auto;min-width:0;gap:7px}
+  .header .logo-mark{flex:none}
+  .header .logo-mark svg{width:30px;height:23px}
+  .header .logo-text{min-width:0}
+  .header .logo-name{font-size:20px;letter-spacing:-.2px}
+  .header .header-actions{gap:6px;align-items:center}
+  .header .hact{padding:5px 4px;gap:0}
+  .header .hact span{display:none}
+  .header .hact .ic-xl{width:20px;height:20px}
+  .header .header-actions .badge{top:-5px;right:-2px;font-size:10px;min-width:17px;height:17px}
+}
+@media (max-width:400px){
+  .header .logo-name{font-size:19px}
+  .header .logo-mark svg{width:28px;height:21px}
+}
